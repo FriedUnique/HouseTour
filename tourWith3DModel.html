@@ -54,6 +54,19 @@
             z-index: 11; 
         }
 
+        .map-room p{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
+            font-size: 35px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+            pointer-events: none;
+            
+        }
+
         .small{
             /*mini map*/
             width: 300px; 
@@ -70,7 +83,7 @@
             height: 100%;
         }
 
-        .hide{
+        .hide p{
             display: none;
         }
 
@@ -99,13 +112,20 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import Room from "/main.js";
+
 
         const Mode = Object.freeze({
            MAP: 0,
            PANORAMA: 1,
            OUTSIDE: 2 
         });
+
+        let viewMode = Mode.PANORAMA;
+
+        const loader = new GLTFLoader();
+
 
         let currentActiveRoom = 0 // the id of the currently selected room;
         
@@ -138,100 +158,104 @@
                 roomDiv.style.top = room.centerY + "px";
                 roomDiv.style.width = room.width + "px";
                 roomDiv.style.height = room.height + "px";
+
+                roomDiv.innerHTML += "<p>"+ room.name +"</p>";
                 
                 roomDiv.addEventListener("click", (e)=>{
                     let roomId = e.srcElement.id;
                     console.log("Teleport to room id " + roomId);
                     currentActiveRoom = roomId;
-                    // toggle the map state (-> close)
-                    mapHandler();
-                    // handle the reload, the switch, etc
 
-                    //createSphere(rooms[roomId].texture);
+                    console.log(roomList[roomId])
+                    
+
+                    let tpPos = roomList[roomId].tpPosition;
+                    moveCamera(tpPos); 
+                    mapHandler();
                 })
 
 
-                console.log(room.texture);
+                console.log(room.model);
 
-                 // document.getElementById("map-container")
-                document.body.appendChild(roomDiv);
+                document.getElementById("map-container").appendChild(roomDiv);
+                // document.body.appendChild(roomDiv);
 
-                rooms.push(new Room(room.centerX, room.centerY, room.width, room.height, room.texture, i));
+                rooms.push(new Room(room.centerX, room.centerY, room.height, room.width, new THREE.Vector3(room.tpPositionX, 0, room.tpPositionZ), room.model, i));
                 i++;
             });
 
             return rooms;
         }
 
-
+        // async function, make the program wait until its finished loading
         const roomList = await loadRoomData();
 
 
-
-
-        let viewMode = Mode.PANORAMA;
+       
 
         let mapContainer = document.getElementById("map-container")
         mapContainer.classList.add("small")
 
-        let oldSphere = null;
+        let oldModel = null;
 
 
-        // 1. Set up the Scene, Camera, and Renderer
+
         const scene = new THREE.Scene();
-        
-        // Use a wide field of view (75) to mimic human vision in VR
+        scene.background = new THREE.Color(0x222222);
         const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
-        
-        // Move the camera slightly off dead-center (0,0,0) so OrbitControls knows which way to orbit
-        camera.position.set(0, 0, 0.1); 
+    
 
+        
         const canvas = document.querySelector('#pano-container');
         const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
-
-
+        
+        
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableZoom = false;
         controls.enablePan = false;
         controls.rotateSpeed = -0.2;
+        
+        
 
+        function createModel(modelLocation){
+            if(!modelLocation) return;
 
-        function createSphere(textureLocation){
-            if(!textureLocation) return;
-
-            if(oldSphere !== null){
-                scene.remove(oldSphere);
-                oldSphere.geometry.dispose();
-                oldSphere.material.map.dispose(); // Disposes the loaded image
-                oldSphere.material.dispose();
+            if(oldModel !== null){
+                scene.remove(oldModel);
+                oldModel.geometry.dispose();
+                oldModel.material.map.dispose(); // Disposes the loaded image
+                oldModel.material.dispose();
             }
 
-            const geometry = new THREE.SphereGeometry(500, 60, 40); 
+            loader.load( modelLocation, function ( gltf ) {
 
-            const textureLoader = new THREE.TextureLoader();
-            const texture = textureLoader.load(textureLocation);
+                oldModel = gltf.scene;
+                const box = new THREE.Box3().setFromObject(oldModel);
+                const center = box.getCenter(new THREE.Vector3());
+                oldModel.position.sub(center); 
 
-            const material = new THREE.MeshBasicMaterial({ 
-                map: texture,
-                side: THREE.BackSide 
-            });
+                scene.add(oldModel);
 
-            const sphere = new THREE.Mesh(geometry, material);
-            oldSphere = sphere;
-            scene.add(sphere);
+                    // loading screen here
+            }, (xhr) => { /*console.log((xhr.loaded / xhr.total * 100) + '% loaded');*/ },
+            (error) => { console.error("An error happened:", error); });
+
         }
 
-        createSphere(roomList[currentActiveRoom].texture)
+        
+
+        const light = new THREE.AmbientLight(0xF8F8F8, 2);
+        scene.add(light);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
+        directionalLight.position.set(5, 10, 7.5);
+        scene.add(directionalLight);
 
 
 
 
-
-
-        window.addEventListener('resize', onWindowResize, false);
-        window.addEventListener("keypress", onKeyPressed)
 
 
 
@@ -244,8 +268,22 @@
         function onKeyPressed(e){
             if(e.key === "p"){
                 mapHandler();
+            }else if(e.key === "q"){
+                console.log(camera.position);
             }
             
+        }
+
+        function moveCamera(positionVector){
+            // fix for the look around movement gemini tha goat
+
+            camera.position.set(positionVector.x, positionVector.y, positionVector.z); 
+
+            controls.target.set(
+                positionVector.x, 
+                positionVector.y, 
+                positionVector.z + 0.1
+            );
         }
 
         function mapHandler(){
@@ -281,6 +319,11 @@
                 roomElement.classList.remove("hide");
                 roomElement.classList.add("show");
 
+                roomElement.style.left = room.centerX + "px";
+                roomElement.style.top = room.centerY + "px";
+                roomElement.style.width = room.width + "px";
+                roomElement.style.height = room.height + "px";
+
 
                 if(room.divId == currentActiveRoom){
                     roomElement.style.backgroundColor = "green";
@@ -295,6 +338,11 @@
                 let roomElement = document.getElementById(room.divId);
                 roomElement.classList.remove("show");
                 roomElement.classList.add("hide");
+
+                roomElement.style.left = room.centerX*0.3 + "px";
+                roomElement.style.top = room.centerY*0.3 + "px";
+                roomElement.style.width = room.width*0.3 + "px";
+                roomElement.style.height = room.height*0.3 + "px";
                 
             });
         }
@@ -304,6 +352,10 @@
 
         }
 
+        function loadingCircle(){
+            // when loading the model
+        }
+
 
 
         function animate() {
@@ -311,6 +363,13 @@
             controls.update();
             renderer.render(scene, camera);
         }
+
+        createModel("HouseModel.glb")
+
+        window.addEventListener('resize', onWindowResize, false);
+        window.addEventListener("keypress", onKeyPressed)
+
+        moveCamera(roomList[currentActiveRoom].tpPosition); 
 
         animate();
     </script>

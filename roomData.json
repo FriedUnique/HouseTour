@@ -1,6 +1,7 @@
 {
   "rooms": [
-    { "name": "kitchen", "centerX": 100, "centerY": 100, "width": 200, "height": 300, "texture": "sphere.jpeg" },
-    { "name": "living room", "centerX": 100, "centerY": 410, "width": 300, "height": 200, "texture": "room.jpeg" }
+    { "name": "living room",  "centerX": 100, "centerY": 100, "width": 250, "height": 205, "model": "HouseModel.glb", "tpPositionX": -1.94,   "tpPositionZ": -0.08},
+    { "name": "kitchen",      "centerX": 355, "centerY": 100, "width": 180, "height": 100, "model": "HouseModel.glb", "tpPositionX": 2.06,       "tpPositionZ": -0.51},
+    { "name": "toilet",       "centerX": 355, "centerY": 205, "width": 180, "height": 100, "model": "HouseModel.glb", "tpPositionX": 1.988,       "tpPositionZ": 0.837}
   ]
 }
