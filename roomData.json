@@ -1,0 +1,6 @@
+{
+  "rooms": [
+    { "name": "kitchen", "centerX": 100, "centerY": 100, "width": 200, "height": 300, "texture": "sphere.jpeg" },
+    { "name": "living room", "centerX": 100, "centerY": 410, "width": 300, "height": 200, "texture": "room.jpeg" }
+  ]
+}

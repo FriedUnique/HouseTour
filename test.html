@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>360 Panorama Viewer</title>
+    <style>
+        /* Reset margins so the canvas touches the edges of the screen */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; 
+        }
+
+        /* 1. The Three.js Canvas */
+        #pano-container {
+            display: block;
+            width: 100%;
+            height: 100%;
+            /* Keeps the canvas locked to the background */
+            position: absolute; 
+            top: 0;
+            left: 0;
+            z-index: 1; /* Bottom layer */
+        }
+
+        /* 2. The Map Overlay */
+        #map-container {
+            /* This breaks it out of normal document flow to float on top */
+            position: absolute; 
+        
+            
+            /* Visual styling (optional) */
+            background-color: rgb(187, 157, 67); 
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
+            
+            /* CRITICAL: Puts it ABOVE the canvas */
+            z-index: 10; 
+        }
+
+        .map-room{
+            position: absolute; 
+        
+            
+            /* Visual styling (optional) */
+            background-color: rgb(0, 0, 0); 
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
+            
+            /* CRITICAL: Puts it ABOVE the canvas */
+            z-index: 11; 
+        }
+
+        .small{
+            /*mini map*/
+            width: 300px; 
+            height: 250px; 
+
+            /*bottom right*/
+            bottom: 20px; 
+            right: 20px; 
+        }
+
+        .big{
+            /*overlay map*/
+            width: 100%;
+            height: 100%;
+        }
+
+        .hide{
+            display: none;
+        }
+
+        .show{
+            display: block;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="map-container" >
+        </div>
+
+    <canvas id="pano-container"></canvas>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import Room from "/main.js";
+
+        const Mode = Object.freeze({
+           MAP: 0,
+           PANORAMA: 1,
+           OUTSIDE: 2 
+        });
+
+        let currentActiveRoom = 0 // the id of the currently selected room;
+        
+
+
+        async function loadRoomData() {
+            try {
+                const response = await fetch('roomData.json');
+                const data = await response.json();
+                
+                // Pass the specific part of the data to your function
+                return initRooms(data.rooms);
+                
+            } catch (error) {
+                console.error("Oops, map data failed to load:", error);
+            }
+        }
+
+        function initRooms(roomData){
+            let i = 0
+            let rooms = [];
+            roomData.forEach(room => {
+                let roomDiv = document.createElement("div");
+
+                roomDiv.classList.add("hide");
+                roomDiv.classList.add("map-room");
+                roomDiv.id = `${i}`;
+
+                roomDiv.style.left = room.centerX + "px";
+                roomDiv.style.top = room.centerY + "px";
+                roomDiv.style.width = room.width + "px";
+                roomDiv.style.height = room.height + "px";
+                
+                roomDiv.addEventListener("click", (e)=>{
+                    let roomId = e.srcElement.id;
+                    console.log("Teleport to room id " + roomId);
+                    currentActiveRoom = roomId;
+                    // toggle the map state (-> close)
+                    mapHandler();
+                    // handle the reload, the switch, etc
+
+                    createSphere(rooms[roomId].texture);
+                })
+
+
+                console.log(room.texture);
+
+                 // document.getElementById("map-container")
+                document.body.appendChild(roomDiv);
+
+                rooms.push(new Room(room.centerX, room.centerY, room.width, room.height, room.texture, i));
+                i++;
+            });
+
+            return rooms;
+        }
+
+
+        const roomList = await loadRoomData();
+
+        // // add the div into the room??
+        // let testRoom = new Room(300, 300, 100, 100, 'sphere.jpeg', 0);
+
+        // // load the rooms into the html body
+
+        // let roomDiv = document.createElement("div");
+        // roomDiv.classList.add("hide");
+        // roomDiv.classList.add("map-room");
+        // roomDiv.id = `${0}`;
+
+        // roomDiv.style.left = testRoom.centerX + "px";
+        // roomDiv.style.top = testRoom.centerY + "px";
+        // roomDiv.style.width = testRoom.width + "px";
+        // roomDiv.style.height = testRoom.height + "px";
+        
+        // roomDiv.addEventListener("click", (e)=>{
+        //     let roomId = e.srcElement.id;
+        //     console.log("Teleport to room id " + roomId);
+        //     currentActiveRoom = roomId;
+        //     // toggle the map state (-> close)
+        //     mapHandler();
+        //     // handle the reload, the switch, etc
+
+        //     createSphere(rooms[roomId].texture);
+        // })
+
+        // document.body.appendChild(roomDiv);
+
+        // rooms.push(testRoom);
+
+
+
+        let viewMode = Mode.PANORAMA;
+
+        let mapContainer = document.getElementById("map-container")
+        mapContainer.classList.add("small")
+
+        let oldSphere = null;
+
+
+        // 1. Set up the Scene, Camera, and Renderer
+        const scene = new THREE.Scene();
+        
+        // Use a wide field of view (75) to mimic human vision in VR
+        const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        // Move the camera slightly off dead-center (0,0,0) so OrbitControls knows which way to orbit
+        camera.position.set(0, 0, 0.1); 
+
+        const canvas = document.querySelector('#pano-container');
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableZoom = false;
+        controls.enablePan = false;
+        controls.rotateSpeed = -0.2;
+
+
+        function createSphere(textureLocation){
+            if(!textureLocation) return;
+
+            if(oldSphere !== null){
+                scene.remove(oldSphere);
+                oldSphere.geometry.dispose();
+                oldSphere.material.map.dispose(); // Disposes the loaded image
+                oldSphere.material.dispose();
+            }
+
+            const geometry = new THREE.SphereGeometry(500, 60, 40); 
+
+            const textureLoader = new THREE.TextureLoader();
+            const texture = textureLoader.load(textureLocation);
+
+            const material = new THREE.MeshBasicMaterial({ 
+                map: texture,
+                side: THREE.BackSide 
+            });
+
+            const sphere = new THREE.Mesh(geometry, material);
+            oldSphere = sphere;
+            scene.add(sphere);
+        }
+
+        createSphere(roomList[currentActiveRoom].texture)
+
+
+
+
+
+
+        window.addEventListener('resize', onWindowResize, false);
+        window.addEventListener("keypress", onKeyPressed)
+
+
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onKeyPressed(e){
+            if(e.key === "p"){
+                mapHandler();
+            }
+            
+        }
+
+        function mapHandler(){
+            switch (viewMode) {
+                    case Mode.MAP:
+                        mapContainer.classList.remove("big");
+                        mapContainer.classList.add("small");
+
+                        hideRooms();
+
+                        viewMode = Mode.PANORAMA;
+                        break;
+
+                    case Mode.PANORAMA:
+                        mapContainer.classList.remove("small");
+                        mapContainer.classList.add("big");
+
+
+                        showRooms();
+
+                        viewMode = Mode.MAP;
+                        break;
+                
+                    default:
+                        break;
+                }
+        }
+
+
+        function showRooms(){
+            roomList.forEach(room => {
+                let roomElement = document.getElementById(room.divId);
+                roomElement.classList.remove("hide");
+                roomElement.classList.add("show");
+
+
+                if(room.divId == currentActiveRoom){
+                    roomElement.style.backgroundColor = "green";
+                }else{
+                    roomElement.style.backgroundColor = "black";
+                }
+            });
+        }
+
+        function hideRooms(){
+            roomList.forEach(room => {
+                let roomElement = document.getElementById(room.divId);
+                roomElement.classList.remove("show");
+                roomElement.classList.add("hide");
+                
+            });
+        }
+
+
+        function playerMapLook(){
+
+        }
+
+
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
