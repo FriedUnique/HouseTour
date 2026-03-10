@@ -49,15 +49,15 @@ function initRooms(roomData, currentActiveRoomObj){
         roomDiv.style.height = room.height + "px";
 
         roomDiv.innerHTML += "<p>"+ room.name +"</p>";
+
+        if(i == currentActiveRoomObj.value){
+            roomDiv.style.backgroundColor = "green";
+        }
         
         roomDiv.addEventListener("click", (e)=>{
             let roomId = e.srcElement.id;
-            // console.log("Teleport to room id " + roomId);
-            currentActiveRoomObj.value = roomId;
-
-            // console.log(roomList[roomId])
             
-
+            currentActiveRoomObj.value = roomId;
             let tpPos = roomList[roomId].tpPosition;
             moveCamera(tpPos); 
             mapHandler();
@@ -73,13 +73,14 @@ function initRooms(roomData, currentActiveRoomObj){
         i++;
     });
 
+
     hideRooms(rooms);
 
     return rooms;
 }
 
 
-export function showRooms(roomList){
+export function showRooms(roomList, currentActiveRoomObj){
     roomList.forEach(room => {
         let roomElement = document.getElementById(room.divId);
         roomElement.classList.remove("hide");
@@ -91,7 +92,7 @@ export function showRooms(roomList){
         roomElement.style.height = room.height + "px";
 
 
-        if(room.divId == currentActiveRoom.value){
+        if(room.divId == currentActiveRoomObj.value){
             roomElement.style.backgroundColor = "green";
         }else{
             roomElement.style.backgroundColor = "black";

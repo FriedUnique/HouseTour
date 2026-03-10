@@ -133,7 +133,7 @@ function mapHandler(){
                 mapContainer.classList.add("big");
 
 
-                showRooms(roomList);
+                showRooms(roomList, currentActiveRoom);
 
                 viewMode = Mode.MAP;
                 break;
@@ -144,9 +144,6 @@ function mapHandler(){
 }
 
 
-function playerMapLook(){
-
-}
 
 function loadingCircle(loadingProgress){
     let loadingParagraph = document.querySelector('#loading-screen > p');
