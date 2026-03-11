@@ -95,7 +95,7 @@ h6{
   height: 100vh;
   width: 100%;
   
-  background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/image.png');
+  background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/data/image.png');
   background-size: cover;
   background-position: center;
   background-attachment: scroll;

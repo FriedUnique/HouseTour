@@ -1,0 +1,133 @@
+/* Reset margins so the canvas touches the edges of the screen */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; 
+}
+
+/* 1. The Three.js Canvas */
+#pano-container {
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* Keeps the canvas locked to the background */
+    position: absolute; 
+    top: 0;
+    left: 0;
+    z-index: 1; /* Bottom layer */
+}
+
+/* 2. The Map Overlay */
+#map-container {
+    /* This breaks it out of normal document flow to float on top */
+    position: absolute; 
+
+    
+    /* Visual styling (optional) */
+    background-color: #ececec; 
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
+    
+    /* CRITICAL: Puts it ABOVE the canvas */
+    z-index: 10; 
+}
+
+#loading-screen{
+    position: absolute; 
+    display: block;
+    z-index: 15;
+    background-color: rgb(46, 147, 187);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+
+#loading-screen p{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    font-size: 35px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.map-room{
+    position: absolute; 
+    cursor: pointer;
+
+    background-color: #ececec; 
+    border-color: black;
+    border-style: solid;
+    border-width: 3px;
+    border-radius: 8px;
+
+    z-index: 11; 
+    transition: scale 0.2s ease, background-color 0.2s ease;
+}
+
+
+.map-room:hover{
+    transition: scale 0.2s ease, background-color 0.2s ease;
+
+    background-color: rgb(81, 171, 223);
+    scale: 1.05;
+    z-index: 100;
+}
+
+
+
+.map-room p{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    font-size: 35px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+    pointer-events: none;
+    
+}
+
+.small{
+    /*mini map*/
+    width: 300px; 
+    height: 250px; 
+
+    /*bottom right*/
+    bottom: 20px; 
+    right: 20px; 
+}
+
+.big{
+    /*overlay map*/
+    width: 100%;
+    height: 100%;
+}
+
+.hide p{
+    
+}
+
+.show{
+    display: block;
+}
+
+.fadeHide{
+    opacity: 0;
+}
+
+.fadeShow{
+    opacity: 1;
+}
+
+
+.selected{
+    background-color: red;
+}
