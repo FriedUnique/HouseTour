@@ -20,20 +20,20 @@ export class Room {
 
 }
 
-export async function loadRoomData(roomDataPath, currentActiveRoomObj) {
+export async function loadRoomData(roomDataPath, currentActiveRoomObj, moveCamera, mapHandler) {
     try {
         const response = await fetch(roomDataPath);
         const data = await response.json();
         
         // Pass the specific part of the data to your function
-        return initRooms(data.rooms, currentActiveRoomObj);
+        return initRooms(data.rooms, currentActiveRoomObj, moveCamera, mapHandler);
         
     } catch (error) {
         console.error("Oops, map data failed to load:", error);
     }
 }
 
-function initRooms(roomData, currentActiveRoomObj){
+function initRooms(roomData, currentActiveRoomObj, moveCamera, mapHandler){
     let i = 0
     let rooms = [];
     roomData.forEach(room => {
@@ -58,8 +58,9 @@ function initRooms(roomData, currentActiveRoomObj){
             let roomId = e.srcElement.id;
             
             currentActiveRoomObj.value = roomId;
-            let tpPos = roomList[roomId].tpPosition;
+            let tpPos = rooms[roomId].tpPosition;
             moveCamera(tpPos); 
+            showRooms(rooms, currentActiveRoomObj);
             mapHandler();
         })
 
@@ -85,12 +86,11 @@ export function showRooms(roomList, currentActiveRoomObj){
         let roomElement = document.getElementById(room.divId);
         roomElement.classList.remove("hide");
         roomElement.classList.add("show");
-
+        
         roomElement.style.left = room.centerX + "px";
         roomElement.style.top = room.centerY + "px";
         roomElement.style.width = room.width + "px";
         roomElement.style.height = room.height + "px";
-
 
         if(room.divId == currentActiveRoomObj.value){
             roomElement.style.backgroundColor = "green";
@@ -113,3 +113,5 @@ export function hideRooms(roomList){
         
     });
 }
+
+

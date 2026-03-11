@@ -14,18 +14,16 @@ const Mode = Object.freeze({
 let viewMode = Mode.PANORAMA;
 
 let currentActiveRoom = { value: 0 } // the id of the currently selected room;
+let oldModel = null;
 
 let fileName = (window.location.pathname.substring(window.location.pathname.lastIndexOf('/') + 1) || 'index.html');
 fileName = fileName.slice(0, fileName.length-5)
 
-const roomList = await loadRoomData(fileName + ".json", currentActiveRoom);
+
 
 
 let mapContainer = document.getElementById("map-container")
 mapContainer.classList.add("small")
-
-let oldModel = null;
-let setupDone = false;
 
 
 
@@ -45,6 +43,51 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableZoom = false;
 controls.enablePan = false;
 controls.rotateSpeed = -0.2;
+
+
+function moveCamera(positionVector){
+    // fix for the look around movement gemini tha goat
+
+    camera.position.set(positionVector.x, positionVector.y, positionVector.z); 
+
+    controls.target.set(
+        positionVector.x, 
+        positionVector.y, 
+        positionVector.z + 0.1
+    );
+}
+
+function mapHandler(){
+    switch (viewMode) {
+            case Mode.MAP:
+                mapContainer.classList.remove("big");
+                mapContainer.classList.add("small");
+
+                hideRooms(roomList);
+
+                viewMode = Mode.PANORAMA;
+                break;
+
+            case Mode.PANORAMA:
+                mapContainer.classList.remove("small");
+                mapContainer.classList.add("big");
+
+
+                showRooms(roomList, currentActiveRoom);
+
+                viewMode = Mode.MAP;
+                break;
+        
+            default:
+                break;
+        }
+}
+
+
+
+const roomList = await loadRoomData(fileName + ".json", currentActiveRoom, moveCamera, mapHandler);
+
+
 
 
 
@@ -105,43 +148,7 @@ function onKeyPressed(e){
     
 }
 
-function moveCamera(positionVector){
-    // fix for the look around movement gemini tha goat
 
-    camera.position.set(positionVector.x, positionVector.y, positionVector.z); 
-
-    controls.target.set(
-        positionVector.x, 
-        positionVector.y, 
-        positionVector.z + 0.1
-    );
-}
-
-function mapHandler(){
-    switch (viewMode) {
-            case Mode.MAP:
-                mapContainer.classList.remove("big");
-                mapContainer.classList.add("small");
-
-                hideRooms(roomList);
-
-                viewMode = Mode.PANORAMA;
-                break;
-
-            case Mode.PANORAMA:
-                mapContainer.classList.remove("small");
-                mapContainer.classList.add("big");
-
-
-                showRooms(roomList, currentActiveRoom);
-
-                viewMode = Mode.MAP;
-                break;
-        
-            default:
-                break;
-        }
-}
 
 
 
@@ -167,5 +174,4 @@ window.addEventListener("keypress", onKeyPressed)
 moveCamera(roomList[currentActiveRoom.value].tpPosition); 
 
 animate();
-setupDone = true;
 loadingCircle();
